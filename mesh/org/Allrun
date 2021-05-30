@@ -1,0 +1,23 @@
+#!/bin/sh
+cd "${0%/*}" || exit                                # Run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # Tutorial run functions
+#------------------------------------------------------------------------------
+
+restore0Dir
+runApplication blockMesh
+app=`echo $(getApplication)`
+if false; then
+    runApplication decomposePar
+    runParallel    $(getApplication)
+    runApplication reconstructPar -newTimes
+else
+    runApplication $(getApplication)
+fi
+echo "less $PWD/log.$app"
+echo "paraFoam -case $PWD"
+
+#mkdir pic
+#pvbatch savefig.py
+#ffmpeg -i pic/flow_%04d.png -vf palettegen palette.png
+#ffmpeg -r 4 -i pic/flow_%04d.png -i palette.png -filter_complex paletteuse test.gif
+#------------------------------------------------------------------------------

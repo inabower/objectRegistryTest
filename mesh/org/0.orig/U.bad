@@ -1,0 +1,86 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2012                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    inlet
+    {
+        type            codedFixedValue;
+        name            wave;
+        value           uniform (0 0 0);
+        
+        code
+        #{
+            const fvMesh& mesh = patch().boundaryMesh().mesh();
+            const Time& t = mesh.time();
+
+            vectorField ans(patch().size(), Zero);
+            forAll(ans, fi)
+            {
+                ans[fi].x() = 10.0* (1.0-cos(t.value()*3.141592*2.0))*(0.25-pow(patch().Cf()[fi].y(), 2.0));
+            }
+            operator==(ans);
+
+            const word massInletName = "massInlet";
+            volScalarField massInlet
+            (
+                IOobject
+                (
+                    massInletName,
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::AUTO_WRITE
+                ),
+                mesh,
+                dimensionedScalar(dimless, Zero)
+            );
+
+            scalarField& massInletRef = massInlet.boundaryFieldRef()[patch().index()];
+
+            const scalarField& alpha = patch().lookupPatchField<volScalarField, scalar>("alpha.water");;
+
+            forAll(massInletRef, fi)
+            {
+                massInletRef[fi] = (alpha[fi] * 1000 + (1.0 - alpha[fi]) * 800) * ans[fi].x();
+            }
+        #};
+    }
+
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform (0 0 0);
+        value           uniform (0 0 0);
+    }
+
+    "wall.*"
+    {
+        type            noSlip;
+    }
+
+    "empty.*"
+    {
+        type            empty;
+    }
+}
+
+
+// ************************************************************************* //

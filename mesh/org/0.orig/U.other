@@ -1,0 +1,81 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2012                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    inlet
+    {
+        type            codedFixedValue;
+        name            wave;
+        value           uniform (0 0 0);
+        
+        code
+        #{
+            vector ans(Zero);
+            
+            const fvMesh& mesh = patch().boundaryMesh().mesh();
+            fvMesh& meshRef = const_cast<fvMesh&>(mesh);
+
+            bool isFirstTime = false;
+            if(!mesh.foundObject<IOdictionary>("firstIterFlag_"+patch().name()))
+            {
+                autoPtr<IOdictionary> flagPtr(
+                    new IOdictionary
+                    (
+                        IOobject
+                        (
+                            "firstIterFlag_"+patch().name(),
+                            meshRef.time().constant(),
+                            meshRef,
+                            IOobject::NO_READ,
+                            IOobject::NO_WRITE
+                        )
+                    )
+                );
+                meshRef.objectRegistry::store(flagPtr);
+                isFirstTime = true;
+            }
+
+            // 最初のイタレーションでない場合はx方向の速度を1.0
+            if(!isFirstTime) ans.x() = 1.0;
+            operator==(ans);
+        #};
+    }
+
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform (0 0 0);
+        value           uniform (0 0 0);
+    }
+
+    "wall.*"
+    {
+        type            noSlip;
+    }
+
+    "empty.*"
+    {
+        type            empty;
+    }
+}
+
+
+// ************************************************************************* //

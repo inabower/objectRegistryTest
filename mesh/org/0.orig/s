@@ -1,0 +1,86 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2012                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      alpha.water;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    inlet
+    {
+        type            codedFixedValue;
+        name            gradation;
+        value           uniform 0.0;
+        
+        code
+        #{
+            scalarField ans(this->size(), Zero);
+            forAll(ans, fi)
+            {
+                ans[fi] = this->patch().Cf()[fi].y() + 0.05;
+            }
+            operator==(ans);
+
+
+            fvMesh& mesh = const_cast<fvMesh&>(patch().boundaryMesh().mesh());
+            // Info << mesh.objectRegistry::names() << endl;
+            if(!mesh.foundObject<IOdictionary>("setInitFlag"))
+            {
+                autoPtr<IOdictionary> flagPtr(
+                    new IOdictionary
+                    (
+                        IOobject
+                        (
+                            "setInitFlag",
+                            mesh.time().constant(),
+                            mesh,
+                            IOobject::NO_READ,
+                            IOobject::NO_WRITE
+                        )
+                    )
+                );
+                mesh.objectRegistry::store(flagPtr);
+
+                scalarField& s = const_cast<scalarField&>(primitiveField());
+                forAll(s, celli)
+                {
+                    s[celli] = mesh.C()[celli].y() + 0.05;
+                }
+            }
+            // Info << mesh.objectRegistry::names() << endl;
+        #};
+    }
+
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform 0.0;
+        value           uniform 0;
+    }
+
+    "wall.*"
+    {
+        type            zeroGradient;
+    }
+
+    "empty.*"
+    {
+        type            empty;
+    }
+}
+
+// ************************************************************************* //
