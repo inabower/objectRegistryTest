@@ -23,7 +23,7 @@ boundaryField
     inlet
     {
         type            codedFixedValue;
-        name            wave;
+        name            stopAtFirstTime;
         value           uniform (0 0 0);
         
         code
